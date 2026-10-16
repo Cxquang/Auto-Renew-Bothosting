@@ -504,7 +504,8 @@ def main():
 
             modal_button_clicked = False
             try:
-                sb.click('button[type="button"]',timeout=8)
+                selector = 'div[role="dialog"] button.btn-primary' 
+                sb.click(selector, timeout=8)
                 modal_button_clicked = True
                 print("✅ 已点击续期按钮")
             except Exception as e:
