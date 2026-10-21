@@ -409,7 +409,6 @@ def main():
     PROXY_SERVER = os.environ.get("PROXY_SERVER", "").strip() or "http://127.0.0.1:1080"
     HEADLESS = os.environ.get("HEADLESS", "false").lower() == "true" 
 
-    # 强制英文界面: 该站按浏览器语言渲染不同文案, 中文 UI 会使英文文案匹配全部失效
     sb_kwargs = {"uc": True, "headless": HEADLESS, "locale_code": "en-US"}
 
     if IS_PROXY:
@@ -431,74 +430,86 @@ def main():
 
         # 方式1: SESSION_TOKEN Cookie 登录（默认）
         if SESSION_TOKEN:
-            print("🚀 启动浏览器...")
-            sb.open(f"{BASE_URL}")
-            sb.wait_for_ready_state_complete()
-            sb.sleep(2)
+            try:
+                print("🚀 启动浏览器...")
+                sb.open(f"{BASE_URL}")
+                sb.wait_for_ready_state_complete()
+                sb.sleep(2)
 
-            print("📝 注入 Cookie...")
-            for name, value in COOKIES.items():
-                if value:
-                    sb.add_cookie({"name": name, "value": value, "domain": "bot-hosting.net"})
+                print("📝 注入 Cookie...")
+                for name, value in COOKIES.items():
+                    if value:
+                        sb.add_cookie({"name": name, "value": value, "domain": "bot-hosting.net"})
 
-            print("🌐 访问 https://bot-hosting.net/a/billings ...")
-            sb.open(f"{BASE_URL}/a/billings")
-            sb.wait_for_ready_state_complete()
-            sb.sleep(3)
-            current_url = sb.get_current_url()
-            current_title = sb.get_title()
-            print(f"📝 当前URL: {current_url}, Title: {current_title}")
+                print("🌐 访问 https://bot-hosting.net/a/billings ...")
+                sb.open(f"{BASE_URL}/a/billings")
+                sb.wait_for_ready_state_complete()
+                sb.sleep(3)
+                current_url = sb.get_current_url()
+                current_title = sb.get_title()
+                print(f"📝 当前URL: {current_url}, Title: {current_title}")
 
-            if "/a/billings" in current_url and "/login" not in current_url and "error=" not in current_url:
-                login_ok = True
-                print("✅ SESSION_TOKEN 登录成功, 当前已到达账单页")
-            else:
-                print(f"❌ SESSION_TOKEN 登录失败,当前URL: {current_url}, 当前标题: {current_title}")
+                if "/a/billings" in current_url and "/login" not in current_url and "error=" not in current_url:
+                    login_ok = True
+                    print("✅ SESSION_TOKEN 登录成功, 当前已到达账单页")
+                else:
+                    print(f"❌ SESSION_TOKEN 登录失败,当前URL: {current_url}, 当前标题: {current_title}")
+            except Exception as e:
+                print(f"❌ SESSION_TOKEN 登录过程异常: {type(e).__name__}: {str(e)[:150]}")
 
-        # 方式2: 密码
+        # 方式2: 密码 
         if not login_ok and EMAIL and PASSWORD:
             _LOGIN_METHOD = "Password"
             print("\n🔄 尝试密码登录...")
-            print(f"🌐 访问 {BASE_URL}/login")
-            sb.open(f"{BASE_URL}/login")
-            sb.wait_for_ready_state_complete()
-            sb.sleep(3)
-            sb.click('button[type="submit"]') # 点击 Continue with email 按钮
-            sb.sleep(12)  # 等待页面加载
-            print(f"📧 填写邮箱...")
-            sb.input('input[type="email"]', EMAIL)
-            sb.sleep(1)
-            print(f"🔑 填写密码...")
-            sb.input('input[type="password"]', PASSWORD)
-            sb.sleep(3)
-
-            if wait_turnstile_present(sb):
-                if not handle_turnstile(sb):
-                    print("❌ 登录界面的 Turnstile 验证失败，尝试兜底点击...")
+            try:
+                # 清掉可能残留的失效会话 cookie, 否则 /login 可能被重定向回账单页, 表单按钮找不到
+                for cookie_name in ("session_token", "login"):
                     try:
-                        sb.cdp.click_captcha()  # 再次尝试点击 Turnstile 验证
-                        sb.sleep(4)
-                    except Exception as e:
-                        print(f"⚠️ 兜底点击失败: {e}")
-                    # sb.save_screenshot("turnstile_failed.png")
-            else:
-                print("ℹ️ 未检测到 Turnstile")
-            sb.sleep(1)
-            sb.click('button[type="submit"]') # 点击登录按钮
-            sb.sleep(6)  # 等待页面加载
-            sb.wait_for_ready_state_complete()
-            sb.open(f"{BASE_URL}/a/billings")
-            sb.wait_for_ready_state_complete()
-            sb.sleep(3)
-            current_url = sb.get_current_url()
-            current_title = sb.get_title()
-            print(f"📝 当前URL: {current_url}, Title: {current_title}")
+                        sb.delete_cookie(cookie_name)
+                    except Exception:
+                        pass
+                print(f"🌐 访问 {BASE_URL}/login")
+                sb.open(f"{BASE_URL}/login")
+                sb.wait_for_ready_state_complete()
+                sb.sleep(3)
+                sb.click('button[type="submit"]') # 点击 Continue with email 按钮
+                sb.sleep(12)  # 等待页面加载
+                print(f"📧 填写邮箱...")
+                sb.input('input[type="email"]', EMAIL)
+                sb.sleep(1)
+                print(f"🔑 填写密码...")
+                sb.input('input[type="password"]', PASSWORD)
+                sb.sleep(3)
 
-            if "/a/billings" in current_url and "/login" not in current_url and "error=" not in current_url:
-                login_ok = True
-                print("✅ Password 登录成功,当前已到达账单页")
-            else:
-                print(f"❌ Password 登录后仍未到达账单页，当前URL: {current_url}")
+                if wait_turnstile_present(sb):
+                    if not handle_turnstile(sb):
+                        print("❌ 登录界面的 Turnstile 验证失败，尝试兜底点击...")
+                        try:
+                            sb.cdp.click_captcha()  # 再次尝试点击 Turnstile 验证
+                            sb.sleep(4)
+                        except Exception as e:
+                            print(f"⚠️ 兜底点击失败: {e}")
+                        # sb.save_screenshot("turnstile_failed.png")
+                else:
+                    print("ℹ️ 未检测到 Turnstile")
+                sb.sleep(1)
+                sb.click('button[type="submit"]') # 点击登录按钮
+                sb.sleep(6)  # 等待页面加载
+                sb.wait_for_ready_state_complete()
+                sb.open(f"{BASE_URL}/a/billings")
+                sb.wait_for_ready_state_complete()
+                sb.sleep(3)
+                current_url = sb.get_current_url()
+                current_title = sb.get_title()
+                print(f"📝 当前URL: {current_url}, Title: {current_title}")
+
+                if "/a/billings" in current_url and "/login" not in current_url and "error=" not in current_url:
+                    login_ok = True
+                    print("✅ Password 登录成功,当前已到达账单页")
+                else:
+                    print(f"❌ Password 登录后仍未到达账单页，当前URL: {current_url}")
+            except Exception as e:
+                print(f"❌ Password 登录过程异常: {type(e).__name__}: {str(e)[:150]}")
 
         if not login_ok:
             error_msg = "Cookie 已失效或页面异常"
