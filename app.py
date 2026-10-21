@@ -2,80 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import os, re, sys, time, random, requests, subprocess,ctypes
-from datetime import datetime
 from seleniumbase import SB
 
 # 环境变量配置(可以直接私库在双引号里填写)
 EMAIL         = os.environ.get("EMAIL") or ""           # 邮箱必填，登录和通知使用
 PASSWORD      = os.environ.get("PASSWORD") or ""        # 主用密码登录方式, 失败时才使用,必须填写
-SESSION_TOKEN = os.environ.get("SESSION_TOKEN") or ""   # session token，默认登录方式,非必须
-GH_TOKEN      = os.environ.get("GH_TOKEN") or ""        # GitHub PAT token,用于自动更新session token,可选
 TG_CHAT_ID    = os.environ.get("TG_CHAT_ID") or ""      # TG chat id,不填写不通知，需和bot token一起填写生效
 TG_BOT_TOKEN  = os.environ.get("TG_BOT_TOKEN") or ""    # TG bot token 
 
 BASE_URL = "https://bot-hosting.net"
 
-if not SESSION_TOKEN and not (EMAIL and PASSWORD):
-    print("ℹ️ 未配置 SESSION_TOKEN 和 PASSWORD,脚本终止。")
+if not (EMAIL and PASSWORD):
+    print("ℹ️ 未配置 EMAIL 和 PASSWORD,脚本终止。")
     sys.exit(1)
-
-# 构造cookie
-COOKIES = {
-    "session_token": SESSION_TOKEN,
-    "login": "true",
-    "theme": "system",
-}
-
-# 记录本次登录方式（用于通知）
-_LOGIN_METHOD = "SESSION_TOKEN"
-
-# 获取cookie到期时间
-def get_cookie_info(sb, name):
-    cookies = sb.get_cookies()
-    for c in cookies:
-        if c.get('name') == name:
-            value = c.get('value')
-            expiry_ts = c.get('expiry')
-            expiry_dt = datetime.fromtimestamp(expiry_ts) if expiry_ts else None
-            return value, expiry_dt
-    return None, None
-
-# 检查是否需要更新cookie
-def should_update_cookie(new_value, old_value, expiry_dt, days_threshold=3):
-    if new_value is None:
-        return False
-    if new_value != old_value:
-        return True
-    if expiry_dt:
-        remaining = (expiry_dt - datetime.now()).total_seconds()
-        if remaining < days_threshold * 24 * 3600:
-            return True
-    return False
-
-# 更新cookie到secrets
-def update_github_secret(secret_name, new_value):
-    if not new_value:
-        print(f"⚠️ 跳过更新 {secret_name}：新值为空")
-        return False
-    masked = new_value[:4] + "..." + new_value[-4:] if len(new_value) > 8 else "***"
-    print(f"🔄 更新 Secret: {secret_name} (新值: {masked})")
-    try:
-        env = os.environ.copy()
-        if GH_TOKEN:
-            env["GH_TOKEN"] = GH_TOKEN
-        proc = subprocess.run(
-            ["gh", "secret", "set", secret_name, "--body", new_value],
-            capture_output=True, text=True, timeout=30, check=False,
-            env=env
-        )
-        if proc.returncode == 0:
-            return True
-        else:
-            print(f"❌ 更新失败: {proc.stderr.strip()}")
-            return False
-    except Exception as e:
-        print(f"❌ 异常: {e}")
-        return False
 
 # 发送tg通知
 def send_telegram_message(message: str):
@@ -108,8 +47,6 @@ def format_notification(status: str, extra: str = "", error: str = "", expiry_da
         f"{status}",
         f"👤 登录账户: {masked_email}",
     ]
-    if _LOGIN_METHOD != "SESSION_TOKEN":
-        lines.append(f"🔐 登录方式: {_LOGIN_METHOD}")
     if expiry_date:
         lines.append(f"📅 到期时间: {expiry_date}")
     if extra:
@@ -417,8 +354,6 @@ def main():
     else:
         print("🍭 未使用代理，直连访问")
 
-    global _LOGIN_METHOD
-
     with SB(**sb_kwargs) as sb:
         try:
             ip = get_current_ip(PROXY_SERVER if IS_PROXY else "")
@@ -428,46 +363,10 @@ def main():
 
         login_ok = False
 
-        # 方式1: SESSION_TOKEN Cookie 登录（默认）
-        if SESSION_TOKEN:
+        # 账号密码登录（密码不过期，唯一登录方式；整段兜异常，失败只标记 login_ok=False 走统一失败通知）
+        if EMAIL and PASSWORD:
+            print("🚀 启动浏览器...")
             try:
-                print("🚀 启动浏览器...")
-                sb.open(f"{BASE_URL}")
-                sb.wait_for_ready_state_complete()
-                sb.sleep(2)
-
-                print("📝 注入 Cookie...")
-                for name, value in COOKIES.items():
-                    if value:
-                        sb.add_cookie({"name": name, "value": value, "domain": "bot-hosting.net"})
-
-                print("🌐 访问 https://bot-hosting.net/a/billings ...")
-                sb.open(f"{BASE_URL}/a/billings")
-                sb.wait_for_ready_state_complete()
-                sb.sleep(3)
-                current_url = sb.get_current_url()
-                current_title = sb.get_title()
-                print(f"📝 当前URL: {current_url}, Title: {current_title}")
-
-                if "/a/billings" in current_url and "/login" not in current_url and "error=" not in current_url:
-                    login_ok = True
-                    print("✅ SESSION_TOKEN 登录成功, 当前已到达账单页")
-                else:
-                    print(f"❌ SESSION_TOKEN 登录失败,当前URL: {current_url}, 当前标题: {current_title}")
-            except Exception as e:
-                print(f"❌ SESSION_TOKEN 登录过程异常: {type(e).__name__}: {str(e)[:150]}")
-
-        # 方式2: 密码 
-        if not login_ok and EMAIL and PASSWORD:
-            _LOGIN_METHOD = "Password"
-            print("\n🔄 尝试密码登录...")
-            try:
-                # 清掉可能残留的失效会话 cookie, 否则 /login 可能被重定向回账单页, 表单按钮找不到
-                for cookie_name in ("session_token", "login"):
-                    try:
-                        sb.delete_cookie(cookie_name)
-                    except Exception:
-                        pass
                 print(f"🌐 访问 {BASE_URL}/login")
                 sb.open(f"{BASE_URL}/login")
                 sb.wait_for_ready_state_complete()
@@ -494,6 +393,7 @@ def main():
                     print("ℹ️ 未检测到 Turnstile")
                 sb.sleep(1)
                 sb.click('button[type="submit"]') # 点击登录按钮
+                print("🖱️ 提交登录按钮")
                 sb.sleep(6)  # 等待页面加载
                 sb.wait_for_ready_state_complete()
                 sb.open(f"{BASE_URL}/a/billings")
@@ -509,19 +409,11 @@ def main():
                 else:
                     print(f"❌ Password 登录后仍未到达账单页，当前URL: {current_url}")
             except Exception as e:
-                print(f"❌ Password 登录过程异常: {type(e).__name__}: {str(e)[:150]}")
+                    print(f"❌ Password 登录过程异常: {type(e).__name__}: {str(e)[:150]}")
 
         if not login_ok:
-            error_msg = "Cookie 已失效或页面异常"
-            if not SESSION_TOKEN and (EMAIL and PASSWORD):
-                error_msg = "Password 登录失败"
-            elif SESSION_TOKEN and (EMAIL and PASSWORD):
-                error_msg = "SESSION_TOKEN 和 Password 均失败"
-            send_telegram_message(format_notification("❌ 登录失败", error=error_msg))
+            send_telegram_message(format_notification("❌ 登录失败", error="Password 登录失败"))
             return
-
-        if _LOGIN_METHOD == "Password":
-            print("ℹ️ 本次使用 Password 登录，新的 SESSION_TOKEN 将自动更新到 Secrets")
 
         # 提取当前到期日期
         sb.sleep(3)
@@ -672,24 +564,6 @@ def main():
                     )
                 )
 
-        # 更新SESSION_TOKEN 
-        print("🔄 检查 SESSION_TOKEN 是否需要更新")
-        new_token, token_expiry = get_cookie_info(sb, "session_token")
-        old_token = SESSION_TOKEN
-
-        if should_update_cookie(new_token, old_token, token_expiry):
-            print("🔄 SESSION_TOKEN 需要更新")
-            if GH_TOKEN:
-                if update_github_secret("SESSION_TOKEN", new_token):
-                    print("✅ SESSION_TOKEN 更新成功")
-                else:
-                    print("⚠️ 更新失败，请检查 GH_TOKEN 权限")
-            else:
-                print("⚠️ 未设置 GH_TOKEN，无法自动更新")
-                print(f"📋 请手动设置 SESSION_TOKEN = {new_token[:4]}...{new_token[-4:]}")
-        else:
-            print("✅ SESSION_TOKEN 无需更新")
-        
         print("🏁 脚本执行完毕")
 
 if __name__ == "__main__":
