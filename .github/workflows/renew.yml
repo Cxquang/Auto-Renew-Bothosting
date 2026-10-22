@@ -40,8 +40,6 @@ jobs:
           PASSWORD: ${{ secrets.PASSWORD }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          IS_PROXY: "true"
-          PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
         run: |
           xvfb-run --auto-servernum python3 app.py
 
