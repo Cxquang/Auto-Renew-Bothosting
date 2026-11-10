@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, re, sys, time, random, requests, subprocess,ctypes
+import os, re, sys, time, random, json, requests, subprocess,ctypes
 from seleniumbase import SB
 
 # 环境变量配置(可以直接私库在双引号里填写)
@@ -114,6 +114,224 @@ def diag_turnstile_dom(sb, errors=None):
     if errors:
         for err in errors:
             print("   [diag][exec-error] " + str(err)[:200])
+
+# ---------- 续期全链路诊断日志 ----------
+# 安装网络/控制台监听: fetch/XHR 请求与响应、console.error/warn、页面异常全部落 localStorage,
+# 页面刷新后仍可读取, 用于定位"点击了但没生效"的真实原因
+DIAG_INSTALL_JS = """
+window.__diagNet = window.__diagNet || [];
+window.__diagConsole = window.__diagConsole || [];
+function __diagPush(key, storageKey, entry, max) {
+    var arr = window[key] = window[key] || [];
+    arr.push(entry);
+    while (arr.length > max) arr.shift();
+    try { localStorage.setItem(storageKey, JSON.stringify(arr)); } catch (e) {}
+}
+if (!window.__diagNet.length) {
+    try {
+        var prevNet = JSON.parse(localStorage.getItem('__diagNetLog') || '[]');
+        if (prevNet && prevNet.length) window.__diagNet = prevNet;
+    } catch (e) {}
+}
+if (!window.__diagConsole.length) {
+    try {
+        var prevCon = JSON.parse(localStorage.getItem('__diagConsoleLog') || '[]');
+        if (prevCon && prevCon.length) window.__diagConsole = prevCon;
+    } catch (e) {}
+}
+if (!window.__diagNetInstalled) {
+    window.__diagNetInstalled = true;
+    var origFetch = window.fetch;
+    if (origFetch) {
+        window.fetch = function () {
+            var args = arguments, url = '', method = 'GET', reqBody = '', start = Date.now();
+            try {
+                var req = args[0];
+                if (typeof req === 'string') { url = req; }
+                else if (req && req.url) { url = req.url; method = req.method || 'GET'; }
+                if (args[1] && args[1].method) method = args[1].method;
+                if (args[1] && args[1].body) reqBody = String(args[1].body).slice(0, 500);
+            } catch (e) {}
+            return origFetch.apply(this, args).then(function (resp) {
+                __diagPush('__diagNet', '__diagNetLog', {ts: Date.now(), t: 'fetch', method: method, url: String(url).slice(0, 300), status: resp.status, ms: Date.now() - start, req: reqBody}, 60);
+                try {
+                    resp.clone().text().then(function (body) {
+                        __diagPush('__diagNet', '__diagNetLog', {ts: Date.now(), t: 'fetch-body', method: method, url: String(url).slice(0, 300), status: resp.status, body: String(body || '').slice(0, 1000)}, 60);
+                    }).catch(function () {});
+                } catch (e) {}
+                return resp;
+            }).catch(function (err) {
+                __diagPush('__diagNet', '__diagNetLog', {ts: Date.now(), t: 'fetch-error', method: method, url: String(url).slice(0, 300), error: String(err).slice(0, 300)}, 60);
+                throw err;
+            });
+        };
+    }
+    var origOpen = XMLHttpRequest.prototype.open;
+    var origSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function (method, url) {
+        this.__diagInfo = {method: method, url: String(url)};
+        return origOpen.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function (body) {
+        var xhr = this, start = Date.now();
+        try {
+            xhr.addEventListener('loadend', function () {
+                var info = xhr.__diagInfo || {};
+                __diagPush('__diagNet', '__diagNetLog', {ts: Date.now(), t: 'xhr', method: info.method, url: String(info.url || '').slice(0, 300), status: xhr.status, ms: Date.now() - start, req: String(body || '').slice(0, 500), body: String(xhr.responseText || '').slice(0, 1000)}, 60);
+            });
+        } catch (e) {}
+        return origSend.apply(this, arguments);
+    };
+}
+if (!window.__diagConsoleInstalled) {
+    window.__diagConsoleInstalled = true;
+    ['error', 'warn'].forEach(function (level) {
+        var orig = console[level];
+        console[level] = function () {
+            try {
+                var parts = Array.prototype.map.call(arguments, function (a) {
+                    try { return (typeof a === 'string') ? a : JSON.stringify(a); } catch (e) { return String(a); }
+                });
+                __diagPush('__diagConsole', '__diagConsoleLog', {ts: Date.now(), level: level, text: parts.join(' ').slice(0, 600)}, 40);
+            } catch (e) {}
+            return orig.apply(console, arguments);
+        };
+    });
+    window.addEventListener('error', function (e) {
+        __diagPush('__diagConsole', '__diagConsoleLog', {ts: Date.now(), level: 'pageerror', text: String((e && e.message) || e).slice(0, 400)}, 40);
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+        var r = e.reason;
+        __diagPush('__diagConsole', '__diagConsoleLog', {ts: Date.now(), level: 'unhandledrejection', text: String((r && r.message) || r).slice(0, 400)}, 40);
+    });
+}
+return 'net=' + window.__diagNet.length + ', console=' + window.__diagConsole.length;
+"""
+
+DIAG_SNAPSHOT_JS = """
+var out = [];
+var clean = function (s) { return String(s || '').replace(/\\s+/g, ' ').trim(); };
+var rawBody = document.body ? (document.body.innerText || '') : '';
+out.push('url=' + location.href);
+out.push('title=' + clean(document.title) + ' readyState=' + document.readyState);
+if (/just a moment|checking your browser|verify you are human/i.test(rawBody)) out.push('WARN=疑似 Cloudflare 挑战页');
+var dialogs = document.querySelectorAll('[role=dialog]');
+out.push('dialogs=' + dialogs.length);
+for (var i = 0; i < dialogs.length; i++) {
+    var d = dialogs[i], dr = d.getBoundingClientRect();
+    out.push('dialog[' + i + '] visible=' + (dr.width > 0 && dr.height > 0) + ' size=' + Math.round(dr.width) + 'x' + Math.round(dr.height) + ' text="' + clean(d.innerText || d.textContent).slice(0, 400) + '"');
+    var btns = d.querySelectorAll('button, input[type=submit], a.btn');
+    out.push('dialog[' + i + '] buttons=' + btns.length);
+    for (var j = 0; j < btns.length; j++) {
+        var b = btns[j], br = b.getBoundingClientRect();
+        out.push('  btn[' + j + '] tag=' + b.tagName.toLowerCase() + ' text="' + clean(b.innerText || b.value) + '" class="' + clean(b.getAttribute('class')).slice(0, 120) + '" disabled=' + (b.disabled === true) + ' aria-disabled=' + b.getAttribute('aria-disabled') + ' visible=' + (br.width > 0 && br.height > 0) + ' rect=' + Math.round(br.x) + ',' + Math.round(br.y) + ',' + Math.round(br.width) + 'x' + Math.round(br.height));
+    }
+}
+var toasts = document.querySelectorAll('[role=alert], [class*=toast], [class*=Toast], [class*=alert], [class*=Alert], [class*=error], [class*=Error], [class*=notification], [class*=Notification]');
+out.push('toast_like=' + toasts.length);
+for (var k = 0; k < toasts.length && k < 12; k++) {
+    var t = toasts[k], tr = t.getBoundingClientRect();
+    if (tr.width > 0 && tr.height > 0) out.push('  toast[' + k + '] class="' + clean(t.getAttribute('class')).slice(0, 100) + '" text="' + clean(t.innerText || t.textContent).slice(0, 250) + '"');
+}
+var kw = /error|fail|invalid|unable|try again|try later|limit|cooldown|already|too many|slow down|captcha|verify|renew|success/i;
+var lines = rawBody.split('\\n'), hits = [];
+for (var m = 0; m < lines.length && hits.length < 15; m++) {
+    var ln = clean(lines[m]);
+    if (ln && kw.test(ln) && ln.length < 200) hits.push(ln);
+}
+out.push('keyword_lines=' + hits.length);
+for (var n = 0; n < hits.length; n++) out.push('  kw: ' + hits[n]);
+var pageBtns = document.querySelectorAll('button, a.btn');
+var shownBtn = 0;
+out.push('page_visible_buttons:');
+for (var p = 0; p < pageBtns.length && shownBtn < 25; p++) {
+    var pb = pageBtns[p], pr = pb.getBoundingClientRect();
+    if (pr.width > 0 && pr.height > 0) {
+        shownBtn += 1;
+        out.push('  pagebtn<' + pb.tagName.toLowerCase() + '> text="' + clean(pb.innerText || pb.value) + '" class="' + clean(pb.getAttribute('class')).slice(0, 100) + '" disabled=' + (pb.disabled === true) + ' aria-disabled=' + pb.getAttribute('aria-disabled'));
+    }
+}
+var tokenLen = 0;
+try {
+    if (window.turnstile && window.turnstile.getResponse) { var v = window.turnstile.getResponse(); tokenLen = v ? v.length : 0; }
+} catch (e) {}
+if (!tokenLen) { var el = document.querySelector('input[name="cf-turnstile-response"]'); tokenLen = el && el.value ? el.value.length : 0; }
+out.push('turnstile_token_len=' + tokenLen + ' widgets=' + document.querySelectorAll('.cf-turnstile, [data-sitekey]').length + ' iframes=' + document.querySelectorAll('iframe').length);
+return out.join('\\n');
+"""
+
+CONFIRM_BTN_INFO_JS = """
+var d = document.querySelector('div[role=dialog]');
+if (!d) return 'NO_DIALOG_FOUND';
+var clean = function (s) { return String(s || '').replace(/\\s+/g, ' ').trim(); };
+var out = ['dialog_text="' + clean(d.innerText || d.textContent).slice(0, 300) + '"'];
+var btns = d.querySelectorAll('button.btn-primary');
+out.push('button.btn-primary count=' + btns.length);
+for (var i = 0; i < btns.length; i++) {
+    var b = btns[i], r = b.getBoundingClientRect();
+    out.push('btn[' + i + '] text="' + clean(b.innerText) + '" disabled=' + (b.disabled === true) + ' aria-disabled=' + b.getAttribute('aria-disabled') + ' visible=' + (r.width > 0 && r.height > 0) + ' outerHTML=' + String(b.outerHTML || '').slice(0, 300));
+}
+return out.join('\\n');
+"""
+
+def diag_install(sb):
+    """挂载网络/控制台监听(每次页面刷新后需重新挂载)"""
+    info = js(sb, DIAG_INSTALL_JS, "")
+    print(f"🧪 诊断监听已挂载: {info}")
+
+def diag_marker(sb, name: str):
+    """在网络日志里打时间标记, 便于区分各阶段请求"""
+    js(sb, "window.__diagNet = window.__diagNet || [];"
+           "window.__diagNet.push({ts: Date.now(), t: 'marker', url: 'MARKER:" + str(name) + "'});"
+           "try { localStorage.setItem('__diagNetLog', JSON.stringify(window.__diagNet)); } catch (e) {}"
+           "return 'ok';", "")
+
+def diag_snapshot(sb, tag: str = "诊断"):
+    """打印弹窗/按钮/Toast/关键词/Turnstile 现场快照"""
+    snap = js(sb, DIAG_SNAPSHOT_JS, "")
+    print(f"🔍 [{tag}] 页面快照:")
+    for line in str(snap).splitlines():
+        print(f"   [{tag}] {line}")
+
+def _diag_read(sb, mem_expr: str, storage_key: str) -> list:
+    raw = js(sb, "return JSON.stringify(" + mem_expr + " || []);", "")
+    if not raw or raw == "[]":
+        raw = js(sb, "try { return localStorage.getItem('" + storage_key + "') || '[]'; } catch (e) { return '[]'; }", "")
+    try:
+        items = json.loads(raw)
+        return items if isinstance(items, list) else []
+    except Exception:
+        return []
+
+def diag_network(sb, tag: str = "网络"):
+    """打印网络请求/响应(含续期 POST 的请求体与响应体)"""
+    items = _diag_read(sb, "window.__diagNet", "__diagNetLog")
+    print(f"🌐 [{tag}] 网络记录 ({len(items)} 条):")
+    if not items:
+        print(f"   [{tag}] 无记录")
+        return
+    for it in items[-45:]:
+        ts = time.strftime("%H:%M:%S", time.gmtime(it.get("ts", 0) / 1000 + 8 * 3600)) if it.get("ts") else "-"
+        line = f"{ts} {it.get('t')} {it.get('method', '')} {str(it.get('url', ''))[:180]} status={it.get('status', '-')}"
+        if it.get("ms") is not None:
+            line += f" {it.get('ms')}ms"
+        if it.get("req"):
+            line += f" req={str(it.get('req'))[:300]}"
+        if it.get("body"):
+            line += f" body={str(it.get('body'))[:600]}"
+        if it.get("error"):
+            line += f" error={str(it.get('error'))[:200]}"
+        print(f"   [{tag}] {line}")
+
+def diag_console(sb, tag: str = "控制台"):
+    """打印 console.error/warn 与页面未捕获异常"""
+    items = _diag_read(sb, "window.__diagConsole", "__diagConsoleLog")
+    print(f"🖥️ [{tag}] 控制台记录 ({len(items)} 条):")
+    if not items:
+        print(f"   [{tag}] 无记录")
+        return
+    for it in items[-30:]:
+        print(f"   [{tag}] {it.get('level')}: {str(it.get('text', ''))[:400]}")
 
 #  页面注入脚本
 # Turnstile token（官方 JS 接口 或 表单隐藏域），未通过时为空串
@@ -357,29 +575,49 @@ def get_expiry_from_dom(sb) -> str:
 # 返回 (是否成功, 最新到期日, 冷却倒计时, 说明)
 def confirm_renewal_result(sb, current_expiry: str, timeout: int = 60) -> tuple:
     deadline = time.time() + timeout
+    start = time.time()
     last_expiry = current_expiry
+    round_no = 0
     while True:
+        round_no += 1
         sb.sleep(3)
-        try:
-            # 带时间戳重新打开账单页，避开前端缓存
-            sb.open(f"{BASE_URL}/a/billings?_r={int(time.time())}")
-            sb.wait_for_ready_state_complete()
-            sb.sleep(2)
-        except Exception as e:
-            print(f"⚠️ 刷新账单页失败: {e}")
+        # 第 1 轮先看点击后的当前页面, 之后带时间戳重新打开账单页(避开前端缓存)
+        if round_no > 1:
+            try:
+                sb.open(f"{BASE_URL}/a/billings?_r={int(time.time())}")
+                sb.wait_for_ready_state_complete()
+                sb.sleep(2)
+            except Exception as e:
+                print(f"⚠️ 刷新账单页失败: {e}")
+        # 页面刷新后监听会丢失, 每轮重新挂载
+        diag_install(sb)
         try:
             text = sb.get_page_text() + "\n" + sb.get_page_source()
         except Exception:
             text = sb.get_page_source()
+        try:
+            current_url = sb.get_current_url()
+        except Exception:
+            current_url = "-"
+        dialog_count = js(sb, "return document.querySelectorAll('[role=dialog]').length;", 0)
         latest = get_expiry_from_dom(sb) or extract_expiry_date(text)
         if latest:
             last_expiry = latest
         match = re.search(r"(?:Renewal cooldown|Renew in)\s+(\d{1,2}:\d{2}:\d{2})", text)
+        print(f"🔁 [轮询 {round_no}] 已用 {int(time.time() - start)}s url={current_url} "
+              f"到期={latest or '未解析'} 倒计时={match.group(1) if match else '无'} 弹窗数={dialog_count}")
         if match:
+            diag_snapshot(sb, f"轮询{round_no}成功现场")
+            diag_network(sb, f"轮询{round_no}网络")
             return True, last_expiry, match.group(1), "账单页已出现下次可续期倒计时"
         if current_expiry and latest and latest != current_expiry:
+            diag_snapshot(sb, f"轮询{round_no}成功现场")
+            diag_network(sb, f"轮询{round_no}网络")
             return True, last_expiry, "", f"到期时间已更新（{current_expiry} → {latest}）"
         if time.time() >= deadline:
+            diag_snapshot(sb, "最终失败现场")
+            diag_network(sb, "最终失败网络")
+            diag_console(sb, "最终失败控制台")
             return False, last_expiry, "", f"{timeout} 秒内账单页未出现续期倒计时，到期时间也未变化"
         sb.sleep(4)
 
@@ -462,6 +700,9 @@ def main():
             send_moviepilot_message(format_notification("❌ 登录失败", error="Password 登录失败"))
             return
 
+        # 挂载网络/控制台诊断监听(续期全链路)
+        diag_install(sb)
+
         # 提取当前到期日期
         sb.sleep(3)
         try:
@@ -504,15 +745,22 @@ def main():
 
         # 点击外部续期按钮等待弹窗
         if outer_renew_selector:
-            print("🔄 点击外部续期按钮，等待验证窗口...")
+            print(f"🔄 点击外部续期按钮，等待验证窗口... (selector={outer_renew_selector})")
+            diag_marker(sb, "before_outer_renew_click")
             try:
                 sb.sleep(2)
                 sb.click(outer_renew_selector)
                 sb.sleep(15)  # 等待模态框加载，可能因网络因素加载慢
             except Exception as e:
                 print(f"❌ 点击外部按钮失败: {e}")
+                diag_snapshot(sb, "点击外部按钮失败现场")
+                diag_network(sb, "点击外部按钮失败网络")
                 send_moviepilot_message(format_notification("❌ 续期失败", error="点击外部续期按钮出错"))
                 return
+
+            # 弹窗打开后的现场诊断: 是否真的有弹窗/按钮是否 disabled/文案是什么
+            diag_snapshot(sb, "弹窗打开后")
+            diag_network(sb, "弹窗打开后网络")
 
             # 处理弹窗中的 Turnstile
             turnstile_passed = True  # 未检测到 Turnstile 时视为无需验证
@@ -532,12 +780,22 @@ def main():
 
             if not turnstile_passed:
                 print("❌ Turnstile 验证最终未通过，脚本退出")
+                diag_snapshot(sb, "Turnstile失败现场")
+                diag_console(sb, "Turnstile失败控制台")
                 send_moviepilot_message(format_notification("❌ 续期失败", error="Turnstile 验证未通过"))
                 return
 
             # 点击续期按钮
             print("⏳ 等待续期按钮可用并点击...")
             time.sleep(5) 
+
+            # 点击前诊断: 弹窗文本/所有 primary 按钮的文案与 disabled 状态
+            diag_marker(sb, "before_confirm_click")
+            diag_snapshot(sb, "点击确认前")
+            print("🔎 弹窗确认按钮诊断:")
+            btn_info = js(sb, CONFIRM_BTN_INFO_JS, "")
+            for line in str(btn_info).splitlines():
+                print(f"   [confirm] {line}")
 
             modal_button_clicked = False
             try:
@@ -550,6 +808,8 @@ def main():
 
             if not modal_button_clicked:
                 print("❌ 未点击到弹窗确认按钮，判定续期失败")
+                diag_snapshot(sb, "未点到确认按钮现场")
+                diag_network(sb, "未点到确认按钮网络")
                 send_moviepilot_message(
                     format_notification(
                         "❌ 续期失败",
@@ -558,6 +818,12 @@ def main():
                     )
                 )
                 return
+
+            # 点击后立即采集现场(不清空弹窗): 弹窗文案/Toast/网络响应/控制台报错
+            sb.sleep(3)
+            diag_snapshot(sb, "点击确认后")
+            diag_network(sb, "点击确认后网络")
+            diag_console(sb, "点击确认后控制台")
 
             print("⏳ 等待新的过期时间...")
             renew_ok, new_expiry, new_countdown, reason = confirm_renewal_result(sb, current_expiry)
@@ -598,6 +864,8 @@ def main():
                 )
             else:
                 print("❌ 未找到续期按钮或倒计时，判定续期失败")
+                diag_snapshot(sb, "未找到续期按钮现场")
+                diag_network(sb, "未找到续期按钮网络")
                 send_moviepilot_message(
                     format_notification(
                         "❌ 续期失败",
