@@ -17,6 +17,7 @@ if MP_URL and not MP_URL.startswith(("http://", "https://")):
 MP_URL = MP_URL.rstrip("/")
 
 BASE_URL = "https://bot-hosting.net"
+BILLINGS_URL = f"{BASE_URL}/dash/billings"  # 站点新版账单页路径(旧版 /a/billings 会重定向到这里)
 
 if not (EMAIL and PASSWORD):
     print("ℹ️ 未配置 EMAIL 和 PASSWORD,脚本终止。")
@@ -584,7 +585,7 @@ def confirm_renewal_result(sb, current_expiry: str, timeout: int = 60) -> tuple:
         # 第 1 轮先看点击后的当前页面, 之后带时间戳重新打开账单页(避开前端缓存)
         if round_no > 1:
             try:
-                sb.open(f"{BASE_URL}/a/billings?_r={int(time.time())}")
+                sb.open(f"{BILLINGS_URL}?_r={int(time.time())}")
                 sb.wait_for_ready_state_complete()
                 sb.sleep(2)
             except Exception as e:
@@ -681,14 +682,15 @@ def main():
                 print("🖱️ 提交登录按钮")
                 sb.sleep(6)  # 等待页面加载
                 sb.wait_for_ready_state_complete()
-                sb.open(f"{BASE_URL}/a/billings")
+                sb.open(BILLINGS_URL)
                 sb.wait_for_ready_state_complete()
                 sb.sleep(3)
                 current_url = sb.get_current_url()
                 current_title = sb.get_title()
                 print(f"📝 当前URL: {current_url}, Title: {current_title}")
 
-                if "/a/billings" in current_url and "/login" not in current_url and "error=" not in current_url:
+                # 兼容新旧路径(/dash/billings、/a/billings), 只要落在账单页且不在登录页即可
+                if "billings" in current_url and "/login" not in current_url and "error=" not in current_url:
                     login_ok = True
                     print("✅ Password 登录成功,当前已到达账单页")
                 else:

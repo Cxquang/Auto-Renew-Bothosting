@@ -28,11 +28,55 @@ jobs:
           seleniumbase install chromedriver
 
       - name: ⚙ 设置代理 (sing-box)
+        id: proxy
         continue-on-error: true
         env:
           NODE_LINK: ${{ secrets.NODE_LINK }}
         run: |
+          # setup_proxy.sh 把 hysteria2 链接里的 obfs= 当作密码，
+          # 但标准分享链接是 obfs=<混淆类型>&obfs-password=<密码>，
+          # 直接传入会导致 obfs 密码错误、QUIC 握手超时。
+          # 这里把链接改写为脚本能识别的形式：obfs=<密码>，并移除 obfs-password。
+          if [[ "$NODE_LINK" == hysteria2://* || "$NODE_LINK" == hy2://* ]] && [[ "$NODE_LINK" == *"obfs-password="* ]]; then
+            obfs_pwd=$(printf '%s' "$NODE_LINK" | sed -n 's/.*[?&]obfs-password=\([^&#]*\).*/\1/p')
+            if [ -n "$obfs_pwd" ]; then
+              obfs_pwd=$(printf '%b' "${obfs_pwd//%/\\x}")  # URL 解码
+              base="${NODE_LINK%%\?*}"
+              query="${NODE_LINK#*\?}"
+              if [ "$query" = "$NODE_LINK" ]; then query=""; fi
+              fragment=""
+              if [[ "$query" == *"#"* ]]; then
+                fragment="#${query#*#}"
+                query="${query%%#*}"
+              fi
+              new_query=""
+              IFS='&' read -ra parts <<< "$query"
+              for part in "${parts[@]}"; do
+                case "$part" in
+                  obfs=*|obfs-password=*) ;;
+                  *) new_query+="${part}&" ;;
+                esac
+              done
+              export NODE_LINK="${base}?${new_query}obfs=${obfs_pwd}${fragment}"
+              echo "[INFO] 已修正 hysteria2 obfs 密码参数"
+            fi
+          fi
           bash <(wget -qO- https://main.ssss.nyc.mn/setup_proxy.sh)
+
+      - name: 🔁 代理连接复测 (首次失败时)
+        if: steps.proxy.outcome == 'failure'
+        run: |
+          echo "⚠️ 代理首次检测失败，使用更长超时复测..."
+          ip=$(curl -x socks5://127.0.0.1:1080 -s --max-time 30 https://api.ipify.org || true)
+          if [ -n "$ip" ]; then
+            echo "✅ 代理复测通过，出口IP: $ip"
+            echo "IS_PROXY=true" >> "$GITHUB_ENV"
+            echo "PROXY_SERVER=socks5://127.0.0.1:1080" >> "$GITHUB_ENV"
+          else
+            echo "❌ 代理复测仍失败，本次改为直连访问"
+            echo "---- sing-box 日志(末尾) ----"
+            tail -n 40 sing-box.log 2>/dev/null || true
+          fi
 
       - name: 🚀 运行续期脚本
         env:
