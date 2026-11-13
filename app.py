@@ -145,12 +145,17 @@ def diag_turnstile_dom(sb, errors=None):
             var r = ifr[i].getBoundingClientRect();
             out.push('iframe w=' + Math.round(r.width) + ' h=' + Math.round(r.height) + ' src=' + (ifr[i].src || '').slice(0, 90));
         }
-        var ts = document.querySelectorAll('[class*="turnstile"], [id*="turnstile"], input[name="cf-turnstile-response"]');
+        var ts = document.querySelectorAll('[class*="turnstile"], [id*="turnstile"], input[name="cf-turnstile-response"], [data-sitekey]');
         out.push('turnstile-ish elements: ' + ts.length);
         for (var j = 0; j < ts.length; j++) {
             var rr = ts[j].getBoundingClientRect();
             var cls = (typeof ts[j].className === 'string') ? ts[j].className : (ts[j].getAttribute('class') || '');
             out.push(' - ' + ts[j].tagName + ' class=' + cls + ' w=' + Math.round(rr.width) + ' h=' + Math.round(rr.height));
+        }
+        var scripts = document.querySelectorAll('script[src*="challenges.cloudflare.com"]');
+        out.push('turnstile script tags: ' + scripts.length);
+        for (var k = 0; k < scripts.length; k++) {
+            out.push(' - script src=' + String(scripts[k].src || '').slice(0, 120));
         }
         out.push('window.turnstile=' + (typeof window.turnstile) + ' readyState=' + document.readyState);
         return out.join('\\n');
@@ -379,6 +384,55 @@ def diag_console(sb, tag: str = "控制台"):
     for it in items[-30:]:
         print(f"   [{tag}] {it.get('level')}: {str(it.get('text', ''))[:400]}")
 
+# 从诊断日志里取最近一条匹配的请求记录(用于确认登录请求是否真的发出)
+def last_api_call(sb, path_kw: str, since_ts: int = 0):
+    items = _diag_read(sb, "window.__diagNet", "__diagNetLog")
+    found = None
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        if path_kw not in str(it.get("url", "")):
+            continue
+        try:
+            if int(it.get("ts") or 0) < since_ts:
+                continue
+        except Exception:
+            pass
+        found = it
+    return found
+
+# 在页面里真实加载 Turnstile api.js, 判断浏览器(经代理)能否访问 challenges.cloudflare.com
+TS_PROBE_JS = """
+if (typeof window.turnstile !== 'undefined') return 'ok';
+window.__tsProbe = window.__tsProbe || 'pending';
+if (!document.getElementById('__tsProbe')) {
+    var s = document.createElement('script');
+    s.id = '__tsProbe';
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&_probe=' + Date.now();
+    s.onload = function () { window.__tsProbe = 'ok'; };
+    s.onerror = function () { window.__tsProbe = 'error'; };
+    document.head.appendChild(s);
+}
+return window.__tsProbe;
+"""
+
+def probe_turnstile_script(sb, timeout=15) -> str:
+    deadline = time.time() + timeout
+    state = "pending"
+    while time.time() < deadline:
+        state = js(sb, TS_PROBE_JS, "pending")
+        if state in ("ok", "error"):
+            break
+        time.sleep(1)
+    state = str(state or "pending")
+    if state == "ok":
+        print("✅ 浏览器内 Turnstile 脚本可加载(代理线路可访问 challenges.cloudflare.com)")
+    elif state == "error":
+        print("❌ 浏览器内 Turnstile 脚本加载失败: 该代理线路无法访问 challenges.cloudflare.com")
+    else:
+        print(f"⚠️ 浏览器内 Turnstile 脚本 {timeout} 秒未加载完成(线路过慢或被拦截)")
+    return state
+
 #  页面注入脚本
 # Turnstile token（官方 JS 接口 或 表单隐藏域），未通过时为空串
 TURNSTILE_TOKEN_JS = """
@@ -558,6 +612,43 @@ def solve_turnstile(sb, timeout=90, tag="Turnstile", first_wait=8) -> bool:
 def handle_turnstile(sb) -> bool:
     print("🛡️ 处理 Turnstile 验证...")
     return solve_turnstile(sb, timeout=90, tag="Turnstile", first_wait=8)
+
+# 登录页 Turnstile: 等待渲染并处理; 长时间未出现时判断代理线路能否加载 Cloudflare 脚本
+def handle_login_turnstile(sb, wait_timeout=40) -> bool:
+    # Turnstile 由 api.js 异步渲染, 走住宅代理时首次加载明显更慢
+    if wait_turnstile_present(sb, timeout=wait_timeout):
+        return handle_turnstile(sb)
+    print(f"ℹ️ {wait_timeout} 秒内未检测到 Turnstile, 打印现场诊断")
+    diag_turnstile_dom(sb)
+    state = probe_turnstile_script(sb)
+    diag_console(sb, "登录页控制台")
+    diag_network(sb, "登录页网络")
+    if state == "ok":
+        print("⏳ Turnstile 脚本可加载, 再等待组件渲染 20 秒...")
+        if wait_turnstile_present(sb, timeout=20):
+            return handle_turnstile(sb)
+    print("⚠️ 登录页 Turnstile 不可用, 前端会拦截登录请求")
+    return False
+
+# 打开登录页 -> Continue with email -> 填写邮箱密码(供失败重试复用)
+def open_login_form(sb):
+    print(f"🌐 访问 {BASE_URL}/login")
+    sb.open(f"{BASE_URL}/login")
+    sb.wait_for_ready_state_complete()
+    sb.sleep(3)
+    diag_install(sb)  # 登录请求也纳入诊断(确认 /api/auth/email 是否真的发出)
+    sb.click('button[type="submit"]')  # 点击 Continue with email 按钮
+    try:
+        sb.wait_for_element('input[type="email"]', timeout=25)
+    except Exception:
+        print("⚠️ 25 秒内未出现邮箱输入框, 继续尝试填写")
+    sb.sleep(2)
+    print("📧 填写邮箱...")
+    sb.input('input[type="email"]', EMAIL)
+    sb.sleep(1)
+    print("🔑 填写密码...")
+    sb.input('input[type="password"]', PASSWORD)
+    sb.sleep(3)
     
 # 获取当前出口ip
 def get_current_ip(proxy_server: str = "") -> str:
@@ -790,40 +881,50 @@ def main():
             print(f"⚠️ 获取出口 IP 失败: {e}")
 
         login_ok = False
+        login_fail_reason = "Password 登录失败"
 
         # 账号密码登录（密码不过期，唯一登录方式；整段兜异常，失败只标记 login_ok=False 走统一失败通知）
         if EMAIL and PASSWORD:
             print("🚀 启动浏览器...")
             try:
-                print(f"🌐 访问 {BASE_URL}/login")
-                sb.open(f"{BASE_URL}/login")
-                sb.wait_for_ready_state_complete()
-                sb.sleep(3)
-                sb.click('button[type="submit"]') # 点击 Continue with email 按钮
-                sb.sleep(12)  # 等待页面加载
-                print(f"📧 填写邮箱...")
-                sb.input('input[type="email"]', EMAIL)
-                sb.sleep(1)
-                print(f"🔑 填写密码...")
-                sb.input('input[type="password"]', PASSWORD)
-                sb.sleep(3)
-
-                if wait_turnstile_present(sb):
-                    if not handle_turnstile(sb):
-                        print("❌ 登录界面的 Turnstile 验证失败，尝试兜底点击...")
+                open_login_form(sb)
+                if not handle_login_turnstile(sb):
+                    print("🔄 重新加载登录页再试一次(排除首次加载慢/脚本加载失败)...")
+                    open_login_form(sb)
+                    if not handle_login_turnstile(sb, wait_timeout=25):
+                        print("❌ 登录界面的 Turnstile 未就绪，尝试兜底点击...")
                         try:
                             sb.cdp.click_captcha()  # 再次尝试点击 Turnstile 验证
                             sb.sleep(4)
                         except Exception as e:
                             print(f"⚠️ 兜底点击失败: {e}")
-                        # sb.save_screenshot("turnstile_failed.png")
-                else:
-                    print("ℹ️ 未检测到 Turnstile")
+
+                diag_marker(sb, "before_login_submit")
+                submit_ts = int(time.time() * 1000)
                 sb.sleep(1)
                 sb.click('button[type="submit"]') # 点击登录按钮
                 print("🖱️ 提交登录按钮")
-                sb.sleep(6)  # 等待页面加载
+                # 等待跳转或登录请求落地(最多 20 秒), 不再固定 sleep
+                for _ in range(20):
+                    sb.sleep(1)
+                    try:
+                        if "/login" not in sb.get_current_url():
+                            break
+                    except Exception:
+                        pass
+                    if last_api_call(sb, "/api/auth/email", submit_ts):
+                        sb.sleep(3)  # 登录请求已发出, 留出跳转/报错渲染时间
+                        break
                 sb.wait_for_ready_state_complete()
+
+                # 登录失败时页面上的报错文案(服务端 error 映射)
+                page_err = js(sb, """
+                    var e = document.querySelector('[role=alert], .alert, .error, [class*=error], [class*=Error]');
+                    return e ? String(e.innerText || e.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 200) : '';
+                """, "")
+                if page_err:
+                    print(f"🧾 [login] 页面提示: {page_err}")
+
                 sb.open(BILLINGS_URL)
                 sb.wait_for_ready_state_complete()
                 sb.sleep(3)
@@ -837,11 +938,23 @@ def main():
                     print("✅ Password 登录成功,当前已到达账单页")
                 else:
                     print(f"❌ Password 登录后仍未到达账单页，当前URL: {current_url}")
+                    login_call = last_api_call(sb, "/api/auth/email", submit_ts)
+                    if login_call:
+                        status = login_call.get("status")
+                        body = str(login_call.get("body") or "").strip()
+                        print(f"   [login] POST /api/auth/email status={status} body={body[:300]}")
+                        login_fail_reason = f"Password 登录失败(服务端返回 HTTP {status})"
+                    else:
+                        print("   [login] 未捕获到 /api/auth/email 请求: 前端因缺少 Turnstile token 中止提交")
+                        login_fail_reason = "Password 登录失败(Turnstile 未加载, 登录请求未发出)"
+                    diag_console(sb, "登录失败控制台")
+                    diag_network(sb, "登录失败网络")
             except Exception as e:
                     print(f"❌ Password 登录过程异常: {type(e).__name__}: {str(e)[:150]}")
+                    login_fail_reason = f"Password 登录异常: {type(e).__name__}"
 
         if not login_ok:
-            send_moviepilot_message(format_notification("❌ 登录失败", error="Password 登录失败"))
+            send_moviepilot_message(format_notification("❌ 登录失败", error=login_fail_reason))
             return
 
         # 挂载网络/控制台诊断监听(续期全链路)
