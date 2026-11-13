@@ -1,0 +1,44 @@
+name: Proxy Check (temp)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    env:
+      RESIDENTIAL_PROXY: ${{ secrets.RESIDENTIAL_PROXY }}
+    steps:
+      - name: 🌐 检测住宅代理线路
+        run: |
+          if [ -z "$RESIDENTIAL_PROXY" ]; then
+            echo "❌ RESIDENTIAL_PROXY 未配置"
+            exit 0
+          fi
+          case "$RESIDENTIAL_PROXY" in
+            http://*|https://*|socks5://*|socks5h://*) PURL="$RESIDENTIAL_PROXY" ;;
+            *) PURL="http://$RESIDENTIAL_PROXY" ;;
+          esac
+          echo "✅ 已读取 RESIDENTIAL_PROXY (长度: ${#RESIDENTIAL_PROXY})"
+
+          echo ""
+          echo "---------- 1) 出口 IP ----------"
+          curl -sS -x "$PURL" --max-time 30 https://api.ip.sb/ip || echo "❌ 出口 IP 获取失败"
+
+          echo ""
+          echo "---------- 2) challenges.cloudflare.com (Turnstile api.js) ----------"
+          curl -x "$PURL" -sS -o /tmp/ts_api.js \
+            -w "http_code=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s size=%{size_download}\n" \
+            --max-time 40 "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" \
+            || echo "❌ 请求失败(超时/被拦截)"
+          echo "内容开头: $(head -c 100 /tmp/ts_api.js 2>/dev/null)"
+
+          echo ""
+          echo "---------- 3) bot-hosting.net 登录页 ----------"
+          curl -x "$PURL" -sS -o /dev/null \
+            -w "http_code=%{http_code} total=%{time_total}s\n" \
+            --max-time 40 https://bot-hosting.net/login || echo "❌ 请求失败(超时/被拦截)"
+
+          echo ""
+          echo "---------- 4) Cloudflare trace (线路归属) ----------"
+          curl -x "$PURL" -sS --max-time 30 https://www.cloudflare.com/cdn-cgi/trace | grep -E "^(ip|loc|colo)=" || echo "❌ 请求失败"
