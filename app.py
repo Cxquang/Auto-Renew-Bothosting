@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, re, sys, time, random, json, requests, subprocess,ctypes
+from urllib.parse import quote, unquote
 from seleniumbase import SB
 
 # 环境变量配置(可以直接私库在双引号里填写)
@@ -18,6 +19,50 @@ MP_URL = MP_URL.rstrip("/")
 
 BASE_URL = "https://bot-hosting.net"
 BILLINGS_URL = f"{BASE_URL}/dash/billings"  # 站点新版账单页路径(旧版 /a/billings 会重定向到这里)
+
+# ---------- 代理地址归一化 ----------
+# 兼容几种常见写法:
+#   http://user:pass@host:port / user:pass@host:port / host:port:user:pass / host:port / socks5://host:port
+# SeleniumBase 的认证代理只认 user:pass@host:port(HTTP), Chrome 不支持 SOCKS 认证
+def normalize_proxy(raw: str):
+    raw = (raw or "").strip()
+    if not raw:
+        return "", "", ""
+    scheme = "http"
+    rest = raw
+    m = re.match(r"^(socks5h?|socks4a?|https?)://(.+)$", raw, re.I)
+    if m:
+        scheme = m.group(1).lower()
+        rest = m.group(2)
+        if scheme == "socks5h":
+            scheme = "socks5"
+    user = pwd = ""
+    if "@" in rest:
+        cred, hostport = rest.rsplit("@", 1)
+        if ":" in cred:
+            user, pwd = cred.split(":", 1)
+        else:
+            user = cred
+    elif rest.count(":") == 3:  # b2proxy 导出的 host:port:user:pass
+        host, port, user, pwd = rest.split(":", 3)
+        hostport = f"{host}:{port}"
+    else:
+        hostport = rest
+    user, pwd = unquote(user), unquote(pwd)
+    if scheme.startswith("socks"):
+        if user:
+            print("⚠️ Chrome 不支持 SOCKS5 认证, 请改用代理商提供的 HTTP 端口")
+        sb_proxy = f"{scheme}://{hostport}"
+    elif user:
+        sb_proxy = f"{user}:{pwd}@{hostport}"
+    else:
+        sb_proxy = hostport
+    req_proxy = f"{scheme}://"
+    if user:
+        req_proxy += f"{quote(user, safe='')}:{quote(pwd, safe='')}@"
+    req_proxy += hostport
+    display = f"{scheme}://{hostport}" + (f" (用户: {user})" if user else "")
+    return sb_proxy, req_proxy, display
 
 if not (EMAIL and PASSWORD):
     print("ℹ️ 未配置 EMAIL 和 PASSWORD,脚本终止。")
@@ -548,8 +593,30 @@ def normalize_date(date_str: str) -> str:
 
 DATE_RE = r"(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}/\d{4})"
 
+# 新版账单页使用英文月份日期(如 "14 Nov 2026"), 需要单独解析
+MONTH_MAP = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+
+def parse_month_date(text: str):
+    if not text:
+        return None
+    m = re.search(r"\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})\b", text)  # 14 Nov 2026
+    if m:
+        mon = MONTH_MAP.get(m.group(2).lower()[:3])
+        if mon:
+            return f"{m.group(3)}/{mon:02d}/{int(m.group(1)):02d}"
+    m = re.search(r"\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})\b", text)  # Nov 14, 2026
+    if m:
+        mon = MONTH_MAP.get(m.group(1).lower()[:3])
+        if mon:
+            return f"{m.group(3)}/{mon:02d}/{int(m.group(2)):02d}"
+    return None
+
 # 获取过期日期
 def extract_expiry_date(page_source: str) -> str:
+    month_date = parse_month_date(page_source)
+    if month_date:
+        return month_date
     patterns = [
         r"[Ee]xpires\s*[:\-]?\s*" + DATE_RE,   # Expires 10/24/2026. Renew manually to extend it for 4 days.
         DATE_RE,                                # 兜底: 账单页纯文本中通常只有到期日期
@@ -565,18 +632,84 @@ def get_expiry_from_dom(sb) -> str:
     for selector in ['span.st-meta', '.st-meta', '[class*="st-meta"]']:
         try:
             if sb.is_element_present(selector):
-                match = re.search(DATE_RE, sb.get_text(selector))
+                text = sb.get_text(selector)
+                month_date = parse_month_date(text)
+                if month_date:
+                    return month_date
+                match = re.search(DATE_RE, text)
                 if match:
                     return normalize_date(match.group(1))
         except Exception:
             pass
     return None
 
+# ---------- 真人化点击 / 服务端错误提取 ----------
+OUTER_RENEW_FINDER_JS = """(function(){var bs=document.querySelectorAll('button,a');
+for(var i=0;i<bs.length;i++){var t=(bs[i].innerText||'').trim();
+if(/^renew( free plan)?$/i.test(t)){return bs[i];}}return null;})()"""
+
+MODAL_CONFIRM_FINDER_JS = """document.querySelector('div[role="dialog"] button.btn-primary')"""
+
+# 用 OS 级鼠标事件点击元素中心: 先随机停顿, 再先移到附近位置后移到目标, 减少"瞬移点击"特征
+def human_click(sb, finder_js: str, tag: str = "") -> bool:
+    try:
+        coords = js(sb, "return (function(){var el=" + finder_js + ";if(!el)return null;"
+                        "el.scrollIntoView({block:'center'});var r=el.getBoundingClientRect();"
+                        "if(r.width<2||r.height<2)return null;"
+                        "return {cx:Math.round(r.x+r.width/2),cy:Math.round(r.y+r.height/2)};})();")
+        if not coords:
+            print(f"⚠️ 未定位到{tag}坐标")
+            return False
+        time.sleep(random.uniform(0.5, 1.5))
+        wi = js(sb, "return '' + (window.screenX || 0) + '|' + (window.screenY || 0) + '|' +"
+                    " window.outerHeight + '|' + window.innerHeight;", "")
+        parts = str(wi).split("|")
+        sx, sy = int(parts[0] or 0), int(parts[1] or 0)
+        bar = int(parts[2] or 800) - int(parts[3] or 768)
+        ax, ay = int(coords["cx"]) + sx, int(coords["cy"]) + sy + bar
+        if os.name != "nt":
+            _activate_window()
+            subprocess.run(["xdotool", "mousemove", "--sync",
+                            str(ax + random.randint(-40, 40)),
+                            str(ay + random.randint(-25, 25))],
+                           timeout=3, stderr=subprocess.DEVNULL)
+            time.sleep(random.uniform(0.15, 0.4))
+        print(f"🖱️ 真人点击{tag} ({ax}, {ay})")
+        _xdotool_click(ax, ay)
+        time.sleep(random.uniform(0.3, 0.8))
+        return True
+    except Exception as e:
+        print(f"⚠️ 真人点击{tag}失败: {e}")
+        return False
+
+# 从诊断日志里取最近一次 /api/billing/renew-free 的失败响应(含服务端错误码)
+def last_renew_api_error(sb, since_ts: int = 0):
+    entries = js(sb, "try { return JSON.parse(localStorage.getItem('__diagNetLog') || '[]'); }"
+                     " catch (e) { return []; }", [])
+    if not isinstance(entries, list):
+        return None
+    found = None
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        if "/api/billing/renew-free" not in str(e.get("url", "")):
+            continue
+        try:
+            if int(e.get("ts") or 0) < since_ts:
+                continue
+        except Exception:
+            pass
+        status = int(e.get("status") or 0)
+        if status >= 400:
+            found = e  # 保留最后一条(通常带响应 body)
+    return found
+
 # 点击确认后轮询账单页，确认续期是否真的生效（只返回成功或失败，不再输出“可能未成功”）
 # 返回 (是否成功, 最新到期日, 冷却倒计时, 说明)
 def confirm_renewal_result(sb, current_expiry: str, timeout: int = 60) -> tuple:
     deadline = time.time() + timeout
     start = time.time()
+    start_ms = int(start * 1000)
     last_expiry = current_expiry
     round_no = 0
     while True:
@@ -619,7 +752,12 @@ def confirm_renewal_result(sb, current_expiry: str, timeout: int = 60) -> tuple:
             diag_snapshot(sb, "最终失败现场")
             diag_network(sb, "最终失败网络")
             diag_console(sb, "最终失败控制台")
-            return False, last_expiry, "", f"{timeout} 秒内账单页未出现续期倒计时，到期时间也未变化"
+            reason = f"{timeout} 秒内账单页未出现续期倒计时，到期时间也未变化"
+            api_err = last_renew_api_error(sb, start_ms)
+            if api_err:
+                body = str(api_err.get("body") or "").strip()
+                reason += f"; 服务端 HTTP {api_err.get('status')}: {body[:200]}"
+            return False, last_expiry, "", reason
         sb.sleep(4)
 
 # 主流程
@@ -629,20 +767,24 @@ def main():
     print("#" * 25)
 
     IS_PROXY = os.environ.get("IS_PROXY", "false").lower() == "true"
-    PROXY_SERVER = os.environ.get("PROXY_SERVER", "").strip() or "http://127.0.0.1:1080"
+    PROXY_RAW = os.environ.get("PROXY_SERVER", "").strip()
+    if IS_PROXY and not PROXY_RAW:
+        PROXY_RAW = "socks5://127.0.0.1:1080"  # 未显式配置时使用本地 sing-box
+    SB_PROXY, PROXY_URL, PROXY_DISPLAY = normalize_proxy(PROXY_RAW)
+    IS_PROXY = IS_PROXY and bool(SB_PROXY)
     HEADLESS = os.environ.get("HEADLESS", "false").lower() == "true" 
 
     sb_kwargs = {"uc": True, "headless": HEADLESS, "locale_code": "en-US"}
 
     if IS_PROXY:
-        print(f"🔗 挂载代理: {PROXY_SERVER}")
-        sb_kwargs["proxy"] = PROXY_SERVER
+        print(f"🔗 挂载代理: {PROXY_DISPLAY}")
+        sb_kwargs["proxy"] = SB_PROXY
     else:
         print("🍭 未使用代理，直连访问")
 
     with SB(**sb_kwargs) as sb:
         try:
-            ip = get_current_ip(PROXY_SERVER if IS_PROXY else "")
+            ip = get_current_ip(PROXY_URL if IS_PROXY else "")
             print(f"📍 当前出口IP: {ip}")
         except Exception as e:
             print(f"⚠️ 获取出口 IP 失败: {e}")
@@ -750,9 +892,15 @@ def main():
             print(f"🔄 点击外部续期按钮，等待验证窗口... (selector={outer_renew_selector})")
             diag_marker(sb, "before_outer_renew_click")
             try:
-                sb.sleep(2)
-                sb.click(outer_renew_selector)
+                sb.sleep(random.uniform(1.0, 2.5))
+                if not human_click(sb, OUTER_RENEW_FINDER_JS, "外部续期按钮"):
+                    print("⚠️ 坐标点击未成功, 回退 WebDriver 点击")
+                    sb.click(outer_renew_selector)
                 sb.sleep(15)  # 等待模态框加载，可能因网络因素加载慢
+                if js(sb, "return document.querySelectorAll('[role=dialog]').length;", 0) == 0:
+                    print("⚠️ 15 秒内未出现弹窗, 回退 WebDriver 再点一次")
+                    sb.click(outer_renew_selector)
+                    sb.sleep(10)
             except Exception as e:
                 print(f"❌ 点击外部按钮失败: {e}")
                 diag_snapshot(sb, "点击外部按钮失败现场")
@@ -800,13 +948,17 @@ def main():
                 print(f"   [confirm] {line}")
 
             modal_button_clicked = False
-            try:
-                selector = 'div[role="dialog"] button.btn-primary' 
-                sb.click(selector, timeout=8)
+            click_ts = int(time.time() * 1000)
+            if human_click(sb, MODAL_CONFIRM_FINDER_JS, "弹窗确认按钮"):
                 modal_button_clicked = True
                 print("✅ 已点击续期按钮")
-            except Exception as e:
-                print(f"续期按钮点击失败: {e}")
+            else:
+                try:
+                    sb.click('div[role="dialog"] button.btn-primary', timeout=8)
+                    modal_button_clicked = True
+                    print("✅ 已点击续期按钮(WebDriver 回退)")
+                except Exception as e:
+                    print(f"续期按钮点击失败: {e}")
 
             if not modal_button_clicked:
                 print("❌ 未点击到弹窗确认按钮，判定续期失败")
@@ -826,6 +978,41 @@ def main():
             diag_snapshot(sb, "点击确认后")
             diag_network(sb, "点击确认后网络")
             diag_console(sb, "点击确认后控制台")
+
+            # 服务端已明确拒绝(如 RENEW_AUTOMATED)时无需再空等 60 秒
+            api_err = last_renew_api_error(sb, click_ts)
+            if api_err:
+                status = api_err.get("status")
+                body = str(api_err.get("body") or "").strip()
+                code = ""
+                try:
+                    code = json.loads(body).get("code", "")
+                except Exception:
+                    pass
+                if status == 403 or code == "RENEW_AUTOMATED":
+                    msg = f"服务端拒绝续期(HTTP {status}, {code or 'unknown'}): {body[:180]}"
+                    print(f"❌ {msg}")
+                    send_moviepilot_message(
+                        format_notification(
+                            "❌ 续期失败",
+                            error=msg,
+                            expiry_date=current_expiry or "（未获取到）"
+                        )
+                    )
+                    return
+            elif modal_button_clicked and js(
+                sb,
+                "var b=document.querySelector('div[role=\\\"dialog\\\"] button.btn-primary');"
+                "return b ? !b.disabled : false;",
+                False,
+            ):
+                # 3 秒内既没有续期请求也没有服务端错误, 且按钮仍可点: 说明点击没命中, 回退一次
+                print("⚠️ 点击未触发续期请求, 回退 WebDriver 再点一次")
+                try:
+                    sb.click('div[role="dialog"] button.btn-primary', timeout=5)
+                    sb.sleep(2)
+                except Exception as e:
+                    print(f"回退点击失败: {e}")
 
             print("⏳ 等待新的过期时间...")
             renew_ok, new_expiry, new_countdown, reason = confirm_renewal_result(sb, current_expiry)
