@@ -1,0 +1,248 @@
+🍭 未使用代理，直连访问
+📍 当前出口IP: 57.154.218.66
+🚀 启动浏览器...
+🌐 访问 https://bot-hosting.net/login
+📧 填写邮箱...
+🔑 填写密码...
+🛡️ 处理 Turnstile 验证...
+🖱️ 第 1 次点击 Turnstile 验证框...
+🖱️ 底层点击 Turnstile (540, 604)
+✅ Turnstile已通过(已获取 token)
+🖱️ 提交登录按钮
+📝 当前URL: https://bot-hosting.net/dash/billings, Title: Billing | Bot-Hosting
+✅ Password 登录成功,当前已到达账单页
+🧪 诊断监听已挂载: net=0, console=0
+⚠️ 未能提取当前到期日期
+✅ 续期按钮可用: 'Renew free plan'
+🔄 点击外部续期按钮，等待验证窗口... (selector=button:contains("Renew"))
+🔍 [弹窗打开后] 页面快照:
+   [弹窗打开后] url=https://bot-hosting.net/dash/billings
+   [弹窗打开后] title=Billing | Bot-Hosting readyState=complete
+   [弹窗打开后] dialogs=1
+   [弹窗打开后] dialog[0] visible=true size=440x507 text="Free plan Renew your Free plan The Free plan must be renewed manually every 4 days. It currently expires on 14 Nov 2026. Renewing now keeps your bots running until 17 Nov 2026. It is free, you just need to pass the bot check below. 1 Bot check Renew for 4 days Complete the bot check to unlock the button. Tired of renewing every 4 days? A paid plan renews automatically and hosts more bots. See plan"
+   [弹窗打开后] dialog[0] buttons=3
+   [弹窗打开后]   btn[0] tag=button text="" class="btn btn-ghost btn-sm btn-icon svelte-1xl7ghf" disabled=false aria-disabled=null visible=true rect=811,138,32x32
+   [弹窗打开后]   btn[1] tag=button text="Renew for 4 days" class="btn btn-primary" disabled=true aria-disabled=null visible=true rect=445,470,390x40
+   [弹窗打开后]   btn[2] tag=button text="See plans" class="rf-link link svelte-hzuuug" disabled=false aria-disabled=null visible=true rect=674,589,59x20
+   [弹窗打开后] toast_like=0
+   [弹窗打开后] keyword_lines=8
+   [弹窗打开后]   kw: Renews soon
+   [弹窗打开后]   kw: Expires 14 Nov 2026. Renew manually to extend it for 4 days.
+   [弹窗打开后]   kw: Renew free plan
+   [弹窗打开后]   kw: Free deployments need renewing every 4 days. Renew now, or pick a plan that renews on its own.
+   [弹窗打开后]   kw: Renew for 4 days
+   [弹窗打开后]   kw: Renew your Free plan
+   [弹窗打开后]   kw: Renew for 4 days
+   [弹窗打开后]   kw: Tired of renewing every 4 days? A paid plan renews automatically and hosts more bots. See plans
+   [弹窗打开后] page_visible_buttons:
+   [弹窗打开后]   pagebtn<a> text="" class="btn btn-ghost plus svelte-1wjw2eu" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Contact support" class="nav-item res sup-nav svelte-1wjw2eu" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Search deployments, files, logs and settings Ctrl K" class="search svelte-1wjw2eu" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Ask AI" class="btn btn-secondary btn-sm ask svelte-1wjw2eu" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Support" class="btn btn-secondary btn-sm sup svelte-1wjw2eu" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="" class="btn btn-secondary btn-sm btn-icon share-btn" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="" class="btn btn-ghost btn-sm bell svelte-vtze1i" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="" class="avatar svelte-1wjw2eu" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Renew free plan" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Invoices" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Compare plans" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Get Custom" class="btn btn-primary cu-btn svelte-hskgo6" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="" class="btn btn-ghost btn-sm btn-icon svelte-1xl7ghf" disabled=false aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary" disabled=true aria-disabled=null
+   [弹窗打开后]   pagebtn<button> text="See plans" class="rf-link link svelte-hzuuug" disabled=false aria-disabled=null
+   [弹窗打开后] turnstile_token_len=0 widgets=0 iframes=8
+🌐 [弹窗打开后网络] 网络记录 (5 条):
+   [弹窗打开后网络] 10:41:28 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537682870&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 14ms
+   [弹窗打开后网络] 10:41:28 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537682870&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [弹窗打开后网络] 10:41:31 marker  MARKER:before_outer_renew_click status=-
+   [弹窗打开后网络] 10:41:31 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 23ms req=[[[{"7":[7674218826825273,"ca-pub-9868622448050774",1,null,null,[3,8012,null,null,null,[null,4,null,"Browse Reference"],null,null,null,[null,10,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20240956,20241042,21066571
+   [弹窗打开后网络] 10:41:31 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+🛡️ 处理 Turnstile 验证...
+🖱️ 第 1 次点击 Turnstile 验证框...
+🖱️ 底层点击 Turnstile (512, 544)
+✅ Turnstile已通过(已获取 token)
+⏳ 等待续期按钮可用并点击...
+🔍 [点击确认前] 页面快照:
+   [点击确认前] url=https://bot-hosting.net/dash/billings
+   [点击确认前] title=Billing | Bot-Hosting readyState=complete
+   [点击确认前] dialogs=1
+   [点击确认前] dialog[0] visible=true size=440x479 text="Free plan Renew your Free plan The Free plan must be renewed manually every 4 days. It currently expires on 14 Nov 2026. Renewing now keeps your bots running until 17 Nov 2026. It is free, you just need to pass the bot check below. 1 Bot check Renew for 4 days Tired of renewing every 4 days? A paid plan renews automatically and hosts more bots. See plans"
+   [点击确认前] dialog[0] buttons=3
+   [点击确认前]   btn[0] tag=button text="" class="btn btn-ghost btn-sm btn-icon svelte-1xl7ghf" disabled=false aria-disabled=null visible=true rect=811,152,32x32
+   [点击确认前]   btn[1] tag=button text="Renew for 4 days" class="btn btn-primary" disabled=false aria-disabled=null visible=true rect=445,484,390x40
+   [点击确认前]   btn[2] tag=button text="See plans" class="rf-link link svelte-hzuuug" disabled=false aria-disabled=null visible=true rect=674,575,59x20
+   [点击确认前] toast_like=0
+   [点击确认前] keyword_lines=8
+   [点击确认前]   kw: Renews soon
+   [点击确认前]   kw: Expires 14 Nov 2026. Renew manually to extend it for 4 days.
+   [点击确认前]   kw: Renew free plan
+   [点击确认前]   kw: Free deployments need renewing every 4 days. Renew now, or pick a plan that renews on its own.
+   [点击确认前]   kw: Renew for 4 days
+   [点击确认前]   kw: Renew your Free plan
+   [点击确认前]   kw: Renew for 4 days
+   [点击确认前]   kw: Tired of renewing every 4 days? A paid plan renews automatically and hosts more bots. See plans
+   [点击确认前] page_visible_buttons:
+   [点击确认前]   pagebtn<a> text="" class="btn btn-ghost plus svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Contact support" class="nav-item res sup-nav svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Search deployments, files, logs and settings Ctrl K" class="search svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Ask AI" class="btn btn-secondary btn-sm ask svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Support" class="btn btn-secondary btn-sm sup svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="" class="btn btn-secondary btn-sm btn-icon share-btn" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="" class="btn btn-ghost btn-sm bell svelte-vtze1i" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="" class="avatar svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Renew free plan" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Invoices" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Compare plans" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Get Custom" class="btn btn-primary cu-btn svelte-hskgo6" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="" class="btn btn-ghost btn-sm btn-icon svelte-1xl7ghf" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary" disabled=false aria-disabled=null
+   [点击确认前]   pagebtn<button> text="See plans" class="rf-link link svelte-hzuuug" disabled=false aria-disabled=null
+   [点击确认前] turnstile_token_len=730 widgets=0 iframes=8
+🔎 弹窗确认按钮诊断:
+   [confirm] dialog_text="Free plan Renew your Free plan The Free plan must be renewed manually every 4 days. It currently expires on 14 Nov 2026. Renewing now keeps your bots running until 17 Nov 2026. It is free, you just need to pass the bot check below. 1 Bot check Renew for 4 days Tired of renewing every 4 days? A paid "
+   [confirm] button.btn-primary count=1
+   [confirm] btn[0] text="Renew for 4 days" disabled=false aria-disabled=null visible=true outerHTML=<button type="button" class="btn btn-primary" style="width: 100%">Renew for 4 days<!----></button>
+✅ 已点击续期按钮
+🔍 [点击确认后] 页面快照:
+   [点击确认后] url=https://bot-hosting.net/dash/billings
+   [点击确认后] title=Billing | Bot-Hosting readyState=complete
+   [点击确认后] dialogs=1
+   [点击确认后] dialog[0] visible=true size=440x589 text="Free plan Renew your Free plan The Free plan must be renewed manually every 4 days. It currently expires on 14 Nov 2026. Renewing now keeps your bots running until 17 Nov 2026. It is free, you just need to pass the bot check below. 1 Bot check Automatic renewals are not allowed. Renew from your own browser. Renew for 4 days Complete the bot check to unlock the button. Tired of renewing every 4 day"
+   [点击确认后] dialog[0] buttons=3
+   [点击确认后]   btn[0] tag=button text="" class="btn btn-ghost btn-sm btn-icon svelte-1xl7ghf" disabled=false aria-disabled=null visible=true rect=811,97,32x32
+   [点击确认后]   btn[1] tag=button text="Renew for 4 days" class="btn btn-primary" disabled=true aria-disabled=null visible=true rect=445,511,390x40
+   [点击确认后]   btn[2] tag=button text="See plans" class="rf-link link svelte-hzuuug" disabled=false aria-disabled=null visible=true rect=674,630,59x20
+   [点击确认后] toast_like=1
+   [点击确认后]   toast[0] class="bd-note err" text="Automatic renewals are not allowed. Renew from your own browser."
+   [点击确认后] keyword_lines=9
+   [点击确认后]   kw: Renews soon
+   [点击确认后]   kw: Expires 14 Nov 2026. Renew manually to extend it for 4 days.
+   [点击确认后]   kw: Renew free plan
+   [点击确认后]   kw: Free deployments need renewing every 4 days. Renew now, or pick a plan that renews on its own.
+   [点击确认后]   kw: Renew for 4 days
+   [点击确认后]   kw: Renew your Free plan
+   [点击确认后]   kw: Automatic renewals are not allowed. Renew from your own browser.
+   [点击确认后]   kw: Renew for 4 days
+   [点击确认后]   kw: Tired of renewing every 4 days? A paid plan renews automatically and hosts more bots. See plans
+   [点击确认后] page_visible_buttons:
+   [点击确认后]   pagebtn<a> text="" class="btn btn-ghost plus svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Contact support" class="nav-item res sup-nav svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Search deployments, files, logs and settings Ctrl K" class="search svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Ask AI" class="btn btn-secondary btn-sm ask svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Support" class="btn btn-secondary btn-sm sup svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="" class="btn btn-secondary btn-sm btn-icon share-btn" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="" class="btn btn-ghost btn-sm bell svelte-vtze1i" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="" class="avatar svelte-1wjw2eu" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Renew free plan" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Invoices" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Compare plans" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Get Custom" class="btn btn-primary cu-btn svelte-hskgo6" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="" class="btn btn-ghost btn-sm btn-icon svelte-1xl7ghf" disabled=false aria-disabled=null
+   [点击确认后]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary" disabled=true aria-disabled=null
+   [点击确认后]   pagebtn<button> text="See plans" class="rf-link link svelte-hzuuug" disabled=false aria-disabled=null
+   [点击确认后] turnstile_token_len=0 widgets=0 iframes=8
+🌐 [点击确认后网络] 网络记录 (8 条):
+   [点击确认后网络] 10:41:28 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537682870&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 14ms
+   [点击确认后网络] 10:41:28 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537682870&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [点击确认后网络] 10:41:31 marker  MARKER:before_outer_renew_click status=-
+   [点击确认后网络] 10:41:31 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 23ms req=[[[{"7":[7674218826825273,"ca-pub-9868622448050774",1,null,null,[3,8012,null,null,null,[null,4,null,"Browse Reference"],null,null,null,[null,10,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20240956,20241042,21066571
+   [点击确认后网络] 10:41:31 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [点击确认后网络] 10:42:06 marker  MARKER:before_confirm_click status=-
+   [点击确认后网络] 10:42:07 fetch POST /api/billing/renew-free status=403 311ms req={"turnstileToken":"1.je5JBI99lAMrG088MWCkF9YOayOPGhzeBbuVAZMJWQsSDxqT5HVtSsAMbmw8DXeqQqNVa0z9qb8Vzf0kCB4_1_mi-YqQe8TXRPrIMyLDpOmWazkqH-IC9laR9l1-KaWSd2b6QIqFPz3uuKNZIXdWYsnhjOd0kSfJJ3sTFrl4s2XrSGXosTwZtVQilTcUD8tsf1RH20uOD6fF8cFz-n0gUzy8GHaX1WQT34mWVMUFvSXrY3Z7uFmmpaH5tsshGhb4gkF0TiS7cHiU3qagToCuZMR
+   [点击确认后网络] 10:42:07 fetch-body POST /api/billing/renew-free status=403 body={"error":"Automatic renewals are not allowed. Renew from your own browser.","code":"RENEW_AUTOMATED"}
+🖥️ [点击确认后控制台] 控制台记录 (0 条):
+   [点击确认后控制台] 无记录
+⏳ 等待新的过期时间...
+🧪 诊断监听已挂载: net=8, console=0
+🔁 [轮询 1] 已用 3s url=https://bot-hosting.net/dash/billings 到期=未解析 倒计时=无 弹窗数=1
+🧪 诊断监听已挂载: net=10, console=0
+🔁 [轮询 2] 已用 14s url=https://bot-hosting.net/dash/billings?_r=1794537740 到期=未解析 倒计时=无 弹窗数=0
+🧪 诊断监听已挂载: net=14, console=0
+🔁 [轮询 3] 已用 25s url=https://bot-hosting.net/dash/billings?_r=1794537751 到期=未解析 倒计时=无 弹窗数=0
+🧪 诊断监听已挂载: net=18, console=0
+🔁 [轮询 4] 已用 36s url=https://bot-hosting.net/dash/billings?_r=1794537763 到期=未解析 倒计时=无 弹窗数=0
+🧪 诊断监听已挂载: net=22, console=0
+🔁 [轮询 5] 已用 48s url=https://bot-hosting.net/dash/billings?_r=1794537774 到期=未解析 倒计时=无 弹窗数=0
+🧪 诊断监听已挂载: net=26, console=0
+🔁 [轮询 6] 已用 59s url=https://bot-hosting.net/dash/billings?_r=1794537786 到期=未解析 倒计时=无 弹窗数=0
+🧪 诊断监听已挂载: net=28, console=0
+🔁 [轮询 7] 已用 71s url=https://bot-hosting.net/dash/billings?_r=1794537797 到期=未解析 倒计时=无 弹窗数=0
+🔍 [最终失败现场] 页面快照:
+   [最终失败现场] url=https://bot-hosting.net/dash/billings?_r=1794537797
+   [最终失败现场] title=Billing | Bot-Hosting readyState=complete
+   [最终失败现场] dialogs=0
+   [最终失败现场] toast_like=0
+   [最终失败现场] keyword_lines=5
+   [最终失败现场]   kw: Renews soon
+   [最终失败现场]   kw: Expires 14 Nov 2026. Renew manually to extend it for 4 days.
+   [最终失败现场]   kw: Renew free plan
+   [最终失败现场]   kw: Free deployments need renewing every 4 days. Renew now, or pick a plan that renews on its own.
+   [最终失败现场]   kw: Renew for 4 days
+   [最终失败现场] page_visible_buttons:
+   [最终失败现场]   pagebtn<a> text="" class="btn btn-ghost plus svelte-1wjw2eu" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Contact support" class="nav-item res sup-nav svelte-1wjw2eu" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Search deployments, files, logs and settings Ctrl K" class="search svelte-1wjw2eu" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Ask AI" class="btn btn-secondary btn-sm ask svelte-1wjw2eu" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Support" class="btn btn-secondary btn-sm sup svelte-1wjw2eu" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="" class="btn btn-secondary btn-sm btn-icon share-btn" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="" class="btn btn-ghost btn-sm bell svelte-vtze1i" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="" class="avatar svelte-1wjw2eu" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Renew free plan" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Invoices" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Compare plans" class="st-link svelte-190oa4a" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Renew for 4 days" class="btn btn-primary btn-sm" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Monthly" class="on" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Yearly2 months free" class="" disabled=false aria-disabled=null
+   [最终失败现场]   pagebtn<button> text="Get Custom" class="btn btn-primary cu-btn svelte-hskgo6" disabled=false aria-disabled=null
+   [最终失败现场] turnstile_token_len=0 widgets=0 iframes=8
+🌐 [最终失败网络] 网络记录 (28 条):
+   [最终失败网络] 10:41:28 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537682870&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 14ms
+   [最终失败网络] 10:41:28 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537682870&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [最终失败网络] 10:41:31 marker  MARKER:before_outer_renew_click status=-
+   [最终失败网络] 10:41:31 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 23ms req=[[[{"7":[7674218826825273,"ca-pub-9868622448050774",1,null,null,[3,8012,null,null,null,[null,4,null,"Browse Reference"],null,null,null,[null,10,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20240956,20241042,21066571
+   [最终失败网络] 10:41:31 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [最终失败网络] 10:42:06 marker  MARKER:before_confirm_click status=-
+   [最终失败网络] 10:42:07 fetch POST /api/billing/renew-free status=403 311ms req={"turnstileToken":"1.je5JBI99lAMrG088MWCkF9YOayOPGhzeBbuVAZMJWQsSDxqT5HVtSsAMbmw8DXeqQqNVa0z9qb8Vzf0kCB4_1_mi-YqQe8TXRPrIMyLDpOmWazkqH-IC9laR9l1-KaWSd2b6QIqFPz3uuKNZIXdWYsnhjOd0kSfJJ3sTFrl4s2XrSGXosTwZtVQilTcUD8tsf1RH20uOD6fF8cFz-n0gUzy8GHaX1WQT34mWVMUFvSXrY3Z7uFmmpaH5tsshGhb4gkF0TiS7cHiU3qagToCuZMR
+   [最终失败网络] 10:42:07 fetch-body POST /api/billing/renew-free status=403 body={"error":"Automatic renewals are not allowed. Renew from your own browser.","code":"RENEW_AUTOMATED"}
+   [最终失败网络] 10:42:16 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 22ms req=[[[{"7":[7674218826825273,"ca-pub-9868622448050774",1,null,null,[5,53013,null,null,null,null,[3],null,null,[null,10,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20240956,20241042,21066571,21066579,31096829,31096951,
+   [最终失败网络] 10:42:16 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [最终失败网络] 10:42:26 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537741041&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 13ms
+   [最终失败网络] 10:42:26 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537741041&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [最终失败网络] 10:42:29 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 31ms req=[[[{"7":[4519802680142166,"ca-pub-9868622448050774",1,null,null,[3,8011,null,null,null,[null,4,null,"Browse Reference"],null,null,null,[null,16,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20241042,21066571,21066579
+   [最终失败网络] 10:42:29 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [最终失败网络] 10:42:37 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537752326&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 14ms
+   [最终失败网络] 10:42:37 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537752326&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [最终失败网络] 10:42:40 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 32ms req=[[[{"7":[5783974295653736,"ca-pub-9868622448050774",1,null,null,[4,8011,null,null,null,[null,5,null,"Browse Reference"],null,null,null,[null,9,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20241042,21066571,21066579,
+   [最终失败网络] 10:42:40 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [最终失败网络] 10:42:48 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537763668&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 13ms
+   [最终失败网络] 10:42:48 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537763668&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [最终失败网络] 10:42:52 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 15ms req=[[[{"7":[1438385163520640,"ca-pub-9868622448050774",1,null,null,[4,8010,null,null,null,[null,5,null,"Browse Reference"],null,null,null,[null,5,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20240807,20241042,21066571,21066579,
+   [最终失败网络] 10:42:52 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [最终失败网络] 10:42:59 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537774515&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 14ms
+   [最终失败网络] 10:42:59 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537774515&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+   [最终失败网络] 10:43:02 fetch POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0 22ms req=[[[{"7":[6066642813873661,"ca-pub-9868622448050774",1,null,null,[18,8010,null,null,null,[null,14,null,"Browse Reference"],null,null,null,[null,10,[42,20222162,20226652,20226654,20234644,20234646,20237279,20237281,20238644,20238646,20239227,20239228,20239667,20239669,20239867,20240807,20241042,210665
+   [最终失败网络] 10:43:02 fetch-body POST https://pagead2.googlesyndication.com/pagead/ping?e=1 status=0
+   [最终失败网络] 10:43:11 fetch POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537786485&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0 13ms
+   [最终失败网络] 10:43:11 fetch-body POST https://analytics.google.com/g/collect?v=2&tid=G-S0VHSF9NEZ&gtm=45je6bb1v888159314za208zd888159314xf1&_p=1794537786485&gcs=G1--&gcd=13l3l3l3l5l1&npa=0&dma=0&_eu=AAAAACQC&cid=581360 status=0
+🖥️ [最终失败控制台] 控制台记录 (0 条):
+   [最终失败控制台] 无记录
+❌ 续期失败（60 秒内账单页未出现续期倒计时，到期时间也未变化）
+✅ MoviePilot 通知已发送: {"success":true,"message":"已发送到 微信","channel":"微信"}
+🏁 脚本执行完毕
