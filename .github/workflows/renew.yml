@@ -31,11 +31,16 @@ jobs:
             *) PURL="http://$RESIDENTIAL_PROXY" ;;
           esac
           echo "✅ 已读取 RESIDENTIAL_PROXY (长度: ${#RESIDENTIAL_PROXY})"
-          echo "---------- 1) 出口 IP ----------"
-          curl -sS -x "$PURL" --max-time 30 https://api.ip.sb/ip || echo "❌ 出口 IP 获取失败"
-          echo "---------- 2) challenges.cloudflare.com (Turnstile api.js) ----------"
-          curl -x "$PURL" -sS -o /tmp/ts_api.js \
-            -w "http_code=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s size=%{size_download}\n" \
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+          echo "---------- 1) 出口 IP (跟随跳转) ----------"
+          curl -sS -L -A "$UA" -x "$PURL" --max-time 30 \
+            -w "\nhttp_code=%{http_code} final=%{url_effective}\n" https://api.ip.sb/ip || echo "❌ 出口 IP 获取失败"
+          echo "---------- 2a) challenges api.js 响应头 ----------"
+          curl -x "$PURL" -sS -A "$UA" -D - -o /dev/null --max-time 40 \
+            "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" || echo "❌ 请求失败(超时/被拦截)"
+          echo "---------- 2b) challenges api.js 跟随跳转 ----------"
+          curl -x "$PURL" -sS -L -A "$UA" -o /tmp/ts_api.js \
+            -w "http_code=%{http_code} final=%{url_effective} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s size=%{size_download}\n" \
             --max-time 40 "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" \
             || echo "❌ 请求失败(超时/被拦截)"
           echo "内容开头: $(head -c 100 /tmp/ts_api.js 2>/dev/null)"
